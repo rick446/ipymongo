@@ -24,6 +24,7 @@ def unload_ipython_extension(ipython):
     pass
 
 def magic_use(self, arg):
+    '''use <database>'''
     conn = self.shell.user_ns['conn']
     db = conn[arg]
     self.shell.user_ns.update(
@@ -32,16 +33,27 @@ def magic_use(self, arg):
     shell_config.in_template = 'In [\\#] (%s): ' % db.name
 
 def magic_show(self, arg):
+    '''show (dbs | collections | users | profile | logs | log <name>)'''
     conn = self.shell.user_ns['conn']
     db = self.shell.user_ns['db']
     if arg in ('databases', 'dbs'):
         return conn.database_names()
     elif arg in ('tables', 'collections'):
         return db.collection_names()
+    elif arg == 'users':
+        return list(db.system.users.find())
+    elif arg == 'profile':
+        return list(db.system.profile.find())
+    elif arg == 'logs':
+        return conn.admin.command('getLog', '*')['names']
+    elif arg.startswith('log '):
+        cmd, rest = arg.split(' ', 1)
+        return conn.admin.command('getLog', rest)['log']
     else:
-        print 'usage: show <dbs|tables>'
+        print 'usage: show (dbs | collections | users | profile | logs | log <name>)'
 
 def magic_connect(self, arg):
+    '''connect <mongodb uri>'''
     ns = self.shell.user_ns
     if arg:
         conn, db = set_uri(arg)
@@ -51,12 +63,19 @@ def magic_connect(self, arg):
     return ns['conn']
 
 def magic_login(self, arg):
+    '''login [username [password] ]'''
     shell = self.shell
-    if arg:
-        username, password = arg.split()
-    else:
+    args = arg.split()
+    if len(args) == 0:
         name = shell.raw_input('Username: ')
         password = getpass.getpass('Password: ')
+    if len(args) == 1:
+        username =args[0]
+        password = getpass.getpass('Password: ')
+    elif len(args) == 2:
+        username, password = args
+    else:
+        print '''usage: login [username [password] ]'''
     return shell.user_ns['db'].authenticate(name, password)
     
 def set_uri(uri):
