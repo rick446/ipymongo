@@ -12,6 +12,7 @@ def load_ipython_extension(ipython):
     ipython.define_magic('use', magic_use)
     ipython.define_magic('connect', magic_connect)
     ipython.define_magic('login', magic_login)
+    ipython.define_magic('show', magic_show)
     conn, db = set_uri(default_uri)
     ipython.user_ns.update(conn=conn, db=db)
     shell_config = ipython.prompt_manager
@@ -29,6 +30,16 @@ def magic_use(self, arg):
         db=db, _curdb=db.name)
     shell_config = self.shell.prompt_manager
     shell_config.in_template = 'In [\\#] (%s): ' % db.name
+
+def magic_show(self, arg):
+    conn = self.shell.user_ns['conn']
+    db = self.shell.user_ns['db']
+    if arg in ('databases', 'dbs'):
+        return conn.database_names()
+    elif arg in ('tables', 'collections'):
+        return db.collection_names()
+    else:
+        print 'usage: show <dbs|tables>'
 
 def magic_connect(self, arg):
     ns = self.shell.user_ns

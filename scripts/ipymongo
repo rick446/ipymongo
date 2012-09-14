@@ -15,9 +15,13 @@ def main():
         nargs='?')
     options = parser.parse_args()
     argv = [ '--ext', 'ipymongo' ]
-    shell = InteractiveShellEmbed(user_ns={})
-    ipymongo.default_uri = ipymongo.set_uri(options.addr)
+    user_ns = {}
+    shell = InteractiveShellEmbed(user_ns=user_ns)
     shell.extension_manager.load_extension('ipymongo')
+    conn, db = ipymongo.set_uri(options.addr)
+    user_ns.update(conn=conn, db=db)
+    shell_config = shell.prompt_manager
+    shell_config.in_template = 'In [\\#] (%s): ' % db.name
     shell()
 
 if __name__ == '__main__':
