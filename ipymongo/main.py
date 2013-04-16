@@ -17,7 +17,7 @@ def load_ipython_extension(ipython):
     ipython.user_ns.update(conn=conn, db=db)
     shell_config = ipython.prompt_manager
     shell_config.in_template = 'In [\\#] (%s): ' % db.name
-    
+
 
 def unload_ipython_extension(ipython):
     # If you want your extension to be unloadable, put that logic here.
@@ -67,41 +67,47 @@ def magic_login(self, arg):
     shell = self.shell
     args = arg.split()
     if len(args) == 0:
-        name = shell.raw_input('Username: ')
+        username = shell.raw_input('Username: ')
         password = getpass.getpass('Password: ')
     if len(args) == 1:
-        username =args[0]
+        username = args[0]
         password = getpass.getpass('Password: ')
     elif len(args) == 2:
         username, password = args
     else:
         print '''usage: login [username [password] ]'''
-    return shell.user_ns['db'].authenticate(name, password)
-    
+    return shell.user_ns['db'].authenticate(username, password)
+
 def set_uri(uri):
     if uri.startswith('mongodb://'):
-        uri = uri.split(':', 1)[-1]
-    result = urlparse.urlparse(uri)
-    hostname = result.hostname or '127.0.0.1'
-    port = result.port or '27017'
-    db = result.path.strip('/') or 'test'
-    args = urlparse.parse_qs(result.query)
-    for k,vs in args.items():
-        if len(vs) == 1:
-            args[k] = vs[0]
-    if 'name' in args or result.username:
-        auth_args = dict(
-            name=args.pop('name', result.username),
-            password=args.pop('password', result.password))
-        if not auth_args['password']:
-            auth_args['password'] = getpass.getpass('Password: ')
-    else:
+        args = {}
+        result = urlparse.urlparse(uri)
+        db = result.path.strip('/') or 'test'
         auth_args = None
+    else:
+#        uri = uri.split(':', 1)[-1]
+        result = urlparse.urlparse(uri)
+        hostname = result.hostname or '127.0.0.1'
+        port = result.port or '27017'
+        db = result.path.strip('/') or 'test'
+        args = urlparse.parse_qs(result.query)
+        for k,vs in args.items():
+            if len(vs) == 1:
+                args[k] = vs[0]
+        if 'name' in args or result.username:
+            auth_args = dict(
+                name=args.pop('name', result.username),
+                password=args.pop('password', result.password))
+            if not auth_args['password']:
+                auth_args['password'] = getpass.getpass('Password: ')
+        else:
+            auth_args = None
+        uri = 'mongodb://%s:%s' % (hostname, port)
     conn = pymongo.Connection(
-        'mongodb://%s:%s' % (hostname, port),
+        uri,
         **args)
-    db = conn[db]
+    if db:
+        db = conn[db]
     if auth_args:
         db.authenticate(**auth_args)
     return conn, db
-                
